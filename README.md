@@ -13,12 +13,12 @@ The distance between is then calculated by using the formula of distance between
 # Photos
 
 What the point cloud looks like
-[alt text](https://github.com/AndreiVladescu/Referential-distance-measurement/blob/main/photo1.png?raw=true)
+![Photo](https://github.com/AndreiVladescu/Referential-distance-measurement/blob/main/photo1.png?raw=true)
 
 After filters are applied on the left camera's image 
-[alt text](https://github.com/AndreiVladescu/Referential-distance-measurement/blob/main/mask1.png?raw=true)
+![Filtered](https://github.com/AndreiVladescu/Referential-distance-measurement/blob/main/mask1.png?raw=true)
 
 Measurement taken
-[alt text](https://github.com/AndreiVladescu/Referential-distance-measurement/blob/main/measurement1.png?raw=true)
+![Measurement](https://github.com/AndreiVladescu/Referential-distance-measurement/blob/main/measurement1.png?raw=true)
 
 The accuracy is variable; if the camers is close, the error is larger, about 12% of the real distance, and at a longer distance, about 8%.
