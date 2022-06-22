@@ -21,4 +21,5 @@ After filters are applied on the left camera's image
 Measurement taken
 ![Measurement](https://github.com/AndreiVladescu/Referential-distance-measurement/blob/main/measurement1.png?raw=true)
 
-The accuracy is variable; if the camers is close, the error is larger, about 12% of the real distance, and at a longer distance, about 8%.
+~~The accuracy is variable; if the camers is close, the error is larger, about 12% of the real distance, and at a longer distance, about 8%.~~
+After tests and resolution scaling, I narrowed the accuracy down to 5% (with pre-defined tweaks) at a distance of about 2.5 meters.
