@@ -101,6 +101,7 @@ def camera_estimations(zed, res, viewer, point_cloud, image):
             text = "Distance: %.3f meters" % distance
             cv2.putText(full_image, text=text, org=(5, 20), fontFace=cv2.FONT_HERSHEY_TRIPLEX,
                         fontScale=0.5, color=(128, 192, 0), thickness=1)
+            cv2.namedWindow("Combined image", cv2.WINDOW_NORMAL)
             cv2.imshow("Combined image", full_image)
 
             # Secondly, calculate distance
@@ -120,14 +121,19 @@ def camera_estimations(zed, res, viewer, point_cloud, image):
             z2 = point_ref_obj[1][2]
 
             distance = math.sqrt((x1 - x2)**2 + (y1 - y2)**2 + (z1 - z2)**2)
+            # Distance lower than 0.06 are runt frames
+            if distance <= 0.06 or np.isnan(distance):
+                continue
             print(str(pixel_cords_ref) + "\t\t" + str(pixel_cords_moving))
             print(str(x1) + " " + str(y1) + " " + str(z1) + "\t\t" + str(x2) + " " + str(y2) + " " + str(z2))
             print("Estimated distance between the 2 objects: " + str(distance) + " meters")
         if cv2.waitKey(30) >= 0:
             break
+
 def predefined_estimations(zed, res, viewer, point_cloud, image):
     # Actual distance to the reference in meters
-    distance_to_ref = 0.52
+    distance_to_ref = 2.335
+    minimum_accepted_distance = 0.06
     err_ratio = 1
     distance = 0
     while viewer.is_available():
@@ -204,6 +210,7 @@ def predefined_estimations(zed, res, viewer, point_cloud, image):
             text = "Distance: %.3f meters" % distance
             cv2.putText(full_image, text=text, org=(5, 20), fontFace=cv2.FONT_HERSHEY_TRIPLEX,
                         fontScale=0.5, color=(128, 192, 0), thickness=1)
+            cv2.namedWindow("Combined image", cv2.WINDOW_NORMAL)
             cv2.imshow("Combined image", full_image)
 
             # Secondly, calculate distance
@@ -224,13 +231,16 @@ def predefined_estimations(zed, res, viewer, point_cloud, image):
 
             err_ratio = abs(distance_to_ref / z2)
             x1 = x1 * err_ratio
-            y1 = x1 * err_ratio
-            z1 = x1 * err_ratio
-            x2 = x1 * err_ratio
-            y2 = x1 * err_ratio
-            z2 = x1 * err_ratio
+            y1 = y1 * err_ratio
+            z1 = z1 * err_ratio
+            x2 = x2 * err_ratio
+            y2 = y2 * err_ratio
+            z2 = z2 * err_ratio
 
             distance = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2)
+            # Distance lower than 0.06 are runt frames
+            if distance <= minimum_accepted_distance or np.isnan(distance):
+                continue
             print(str(pixel_cords_ref) + "\t\t" + str(pixel_cords_moving))
             print(str(x1) + " " + str(y1) + " " + str(z1) + "\t\t" + str(x2) + " " + str(y2) + " " + str(z2))
             print("Error : " + str(err_ratio))
@@ -241,10 +251,14 @@ def predefined_estimations(zed, res, viewer, point_cloud, image):
 if __name__ == "__main__":
     zed = sl.Camera()
 
-    init = sl.InitParameters(camera_resolution=sl.RESOLUTION.HD720,
+    init = sl.InitParameters(camera_resolution=sl.RESOLUTION.HD1080,
                                  depth_mode=sl.DEPTH_MODE.ULTRA,
+                                 #sensing_mode=sl.SENSING_MODE.FILL,
                                  coordinate_units=sl.UNIT.METER,
                                  coordinate_system=sl.COORDINATE_SYSTEM.RIGHT_HANDED_Y_UP)
+
+    runtime_parameters = sl.RuntimeParameters()
+    runtime_parameters.sensing_mode = sl.SENSING_MODE.FILL
 
     status = zed.open(init)
     if status != sl.ERROR_CODE.SUCCESS:
@@ -252,8 +266,9 @@ if __name__ == "__main__":
         exit()
 
     res = sl.Resolution()
-    res.width = 1080
-    res.height = 720
+
+    res.width = 1920
+    res.height = 1080
 
     camera_model = zed.get_camera_information().camera_model
     print("Camera model is " + str(camera_model))
