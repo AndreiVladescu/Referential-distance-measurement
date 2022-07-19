@@ -6,9 +6,13 @@ import time
 import signal
 import math
 import sys
+from mpl_toolkits import mplot3d
+import numpy as np
+import matplotlib.pyplot as plt
 
 zed_list = []
 left_list = []
+depth_list = []
 timestamp_list = []
 thread_list = []
 stop_signal = False
@@ -16,10 +20,13 @@ stop_signal = False
 full_image_list = []
 distance_list = []
 point_cloud_list = []
+x_cords_list = []
+y_cords_list = []
+z_cords_list = []
 
-blue_lower_limit = np.array([85, 120, 40])  # setting the blue lower limit
+blue_lower_limit = np.array([85, 120, 50])  # setting the blue lower limit
 blue_upper_limit = np.array([125, 255, 255])  # setting the blue upper limit
-green_lower_limit = np.array([30, 100, 40])  # setting the green lower limit
+green_lower_limit = np.array([30, 80, 20])  # setting the green lower limit
 green_upper_limit = np.array([102, 255, 255])  # setting the green upper limit
 
 def signal_handler(signal, frame):
@@ -34,15 +41,20 @@ def grab_run(index):
     global zed_list
     global timestamp_list
     global left_list
+    global depth_list
     global full_image_list
     global distance_list
     global point_cloud_list
+    global x_cords_list
+    global y_cords_list
+    global z_cords_list
 
     runtime = sl.RuntimeParameters()
     while not stop_signal:
         err = zed_list[index].grab(runtime)
         if err == sl.ERROR_CODE.SUCCESS:
             zed_list[index].retrieve_image(left_list[index], sl.VIEW.LEFT)
+            #zed_list[index].retrieve_measure(depth_list[index], sl.MEASURE.DEPTH)
             zed_list[index].retrieve_measure(point_cloud_list[index], sl.MEASURE.XYZ, sl.MEM.CPU)
             timestamp_list[index] = zed_list[index].get_timestamp(sl.TIME_REFERENCE.CURRENT).data_ns
             find_center_weights(index)
@@ -55,9 +67,13 @@ def grab_run(index):
 def find_center_weights(index):
     global zed_list
     global left_list
+    global depth_list
     global full_image_list
     global distance_list
     global point_cloud_list
+    global x_cords_list
+    global y_cords_list
+    global z_cords_list
 
     # Use image of the left camera
     image_cv2 = left_list[index].get_data()
@@ -98,7 +114,7 @@ def find_center_weights(index):
     # Update coordinates of the moving object
     pixel_cords_moving = (round(x_moving + width / 2), round(y_moving + height / 2))
 
-    # Find center-weight  of the green object
+    # Find center-weigth  of the green object
     gray = cv2.cvtColor(image_green, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (7, 7), 0)
     gray = cv2.erode(gray, (5, 5), cv2.BORDER_REFLECT)
@@ -143,6 +159,8 @@ def find_center_weights(index):
     # Distance lower than 0.06 are runt frames
     if distance <= 0.06 or np.isnan(distance):
         return
+
+    #print("Estimated distance between the 2 objects: " + str(distance) + " meters")
     distance_list[index] = distance
 
     full_image = image_blue + image_green
@@ -151,16 +169,23 @@ def find_center_weights(index):
                 fontScale=0.6, color=(128, 192, 0), thickness=1)
     full_image_list[index] = full_image
 
+    x_cords_list[index] = moving_x1 - static_x2
+    y_cords_list[index] = moving_y1 - static_y2
+    z_cords_list[index] = moving_z1 - static_z2
 
 def main():
     global stop_signal
     global zed_list
     global left_list
+    global depth_list
     global timestamp_list
     global thread_list
     global full_image_list
     global distance_list
     global point_cloud_list
+    global x_cords_list
+    global y_cords_list
+    global z_cords_list
 
     signal.signal(signal.SIGINT, signal_handler)
 
@@ -182,11 +207,16 @@ def main():
         print("Opening {}".format(name_list[index]))
         zed_list.append(sl.Camera())
         left_list.append(sl.Mat())
+        depth_list.append(sl.Mat())
         point_cloud_list.append(sl.Mat())
         timestamp_list.append(0)
         last_ts_list.append(0)
         full_image_list.append(0)
         distance_list.append(0)
+        x_cords_list.append(0)
+        y_cords_list.append(0)
+        z_cords_list.append(0)
+
         status = zed_list[index].open(init)
         if status != sl.ERROR_CODE.SUCCESS:
             print(repr(status))
@@ -206,23 +236,31 @@ def main():
             if zed_list[index].is_opened():
 
                 if (timestamp_list[index] > last_ts_list[index]):
-                    # Filtered images shown
                     cv2.namedWindow('Masked image from {}'.format(name_list[index]), cv2.WINDOW_NORMAL)
                     cv2.imshow('Masked image from {}'.format(name_list[index]), full_image_list[index])
+                    cv2.imshow(name_list[index], left_list[index].get_data())
                     cv2.resizeWindow('Masked image from {}'.format(name_list[index]), 720, 480)
 
-                    # Unfiltered images shown
-                    cv2.imshow(name_list[index], left_list[index].get_data())
-
                     print("Measure from {}: ".format(name_list[index]) + str(distance_list[index]) + " meters")
-                    # Only show this one time
-                    if index == len(zed_list):
-                        median_distance = 0
-                        for distance_index in range(0, len(distance_list)):
-                            median_distance += distance_list[distance_index]
-                        median_distance = median_distance / len(zed_list)
+
+                    median_distance = 0
+                    median_cords = [0, 0, 0]
+
+                    for distance_index in range(0, len(distance_list)):
+                        median_distance += distance_list[distance_index]
+                    median_distance = median_distance / len(zed_list)
+                    if index == 0:
                         print("Median distance between the 2 objects: " + str(median_distance) + " meters\n")
+
+                    for cords_index in range(0, len(x_cords_list)):
+                        median_cords[0] += x_cords_list[cords_index] / len(x_cords_list)
+                        median_cords[1] += y_cords_list[cords_index] / len(y_cords_list)
+                        median_cords[2] += z_cords_list[cords_index] / len(z_cords_list)
+                    if index == 0:
+                        print("Coordinates from origin to moving: (x, y, z) " + str(median_cords[0]) + " "
+                              + str(median_cords[1]) + " " + str(median_cords[2]))
                     last_ts_list[index] = timestamp_list[index]
+
         key = cv2.waitKey(10)
 
     cv2.destroyAllWindows()
@@ -232,7 +270,7 @@ def main():
     for index in range(0, len(thread_list)):
         thread_list[index].join()
 
-    print("\nFinished")
+    print("\nFINISH")
 
 
 if __name__ == "__main__":
