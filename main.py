@@ -29,6 +29,12 @@ blue_upper_limit = np.array([125, 255, 255])  # setting the blue upper limit
 green_lower_limit = np.array([30, 80, 20])  # setting the green lower limit
 green_upper_limit = np.array([102, 255, 255])  # setting the green upper limit
 
+file_name = "distances.txt"
+show_camera_feed = False
+show_camera_feed_masked = True
+measurements_limit = 1000
+measurements_index = 0
+
 def signal_handler(signal, frame):
     global stop_signal
     stop_signal = True
@@ -48,6 +54,8 @@ def grab_run(index):
     global x_cords_list
     global y_cords_list
     global z_cords_list
+    global measurements_index
+    global measurements_limit
 
     runtime = sl.RuntimeParameters()
     while not stop_signal:
@@ -58,7 +66,8 @@ def grab_run(index):
             zed_list[index].retrieve_measure(point_cloud_list[index], sl.MEASURE.XYZ, sl.MEM.CPU)
             timestamp_list[index] = zed_list[index].get_timestamp(sl.TIME_REFERENCE.CURRENT).data_ns
             find_center_weights(index)
-        time.sleep(0.001)  # 1ms
+            measurements_index += 1
+        time.sleep(0.005)  # 5ms
     zed_list[index].close()
 
 
@@ -166,12 +175,16 @@ def find_center_weights(index):
     full_image = image_blue + image_green
     text = "Distance: %.3f meters" % distance
     cv2.putText(full_image, text=text, org=(5, 20), fontFace=cv2.FONT_HERSHEY_TRIPLEX,
-                fontScale=0.6, color=(128, 192, 0), thickness=1)
+                fontScale=0.8, color=(128, 192, 0), thickness=1)
     full_image_list[index] = full_image
 
     x_cords_list[index] = moving_x1 - static_x2
     y_cords_list[index] = moving_y1 - static_y2
     z_cords_list[index] = moving_z1 - static_z2
+
+def print_distances_to_file(index, output_file):
+    global distance_list
+    output_file.write(str(distance_list[index]) + '\n')
 
 def main():
     global stop_signal
@@ -186,6 +199,12 @@ def main():
     global x_cords_list
     global y_cords_list
     global z_cords_list
+    global show_camera_feed
+    global show_camera_feed_masked
+    global measurements_limit
+    global measurements_index
+
+    output_file = open(file_name, "w")
 
     signal.signal(signal.SIGINT, signal_handler)
 
@@ -232,16 +251,24 @@ def main():
     # Display camera images
     key = ''
     while key != 113:  # for 'q' key
+        if measurements_index > measurements_limit:
+            break
         for index in range(0, len(zed_list)):
             if zed_list[index].is_opened():
 
                 if (timestamp_list[index] > last_ts_list[index]):
-                    cv2.namedWindow('Masked image from {}'.format(name_list[index]), cv2.WINDOW_NORMAL)
-                    cv2.imshow('Masked image from {}'.format(name_list[index]), full_image_list[index])
-                    cv2.imshow(name_list[index], left_list[index].get_data())
-                    cv2.resizeWindow('Masked image from {}'.format(name_list[index]), 720, 480)
+
+                    if show_camera_feed_masked:
+                        cv2.namedWindow('Masked image from {}'.format(name_list[index]), cv2.WINDOW_NORMAL)
+                        cv2.imshow('Masked image from {}'.format(name_list[index]), full_image_list[index])
+                        cv2.resizeWindow('Masked image from {}'.format(name_list[index]), 1366, 720)
+
+                    if show_camera_feed:
+                        cv2.imshow(name_list[index], left_list[index].get_data())
+
 
                     print("Measure from {}: ".format(name_list[index]) + str(distance_list[index]) + " meters")
+                    print_distances_to_file(index, output_file)
 
                     median_distance = 0
                     median_cords = [0, 0, 0]
@@ -270,7 +297,8 @@ def main():
     for index in range(0, len(thread_list)):
         thread_list[index].join()
 
-    print("\nFINISH")
+    output_file.close()
+    print("\nProgram Finished")
 
 
 if __name__ == "__main__":
