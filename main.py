@@ -32,7 +32,7 @@ green_upper_limit = np.array([102, 255, 255])  # setting the green upper limit
 file_name = "distances.txt"
 show_camera_feed = False
 show_camera_feed_masked = True
-measurements_limit = 1000
+measurements_limit = 2500
 measurements_index = 0
 
 def signal_handler(signal, frame):
