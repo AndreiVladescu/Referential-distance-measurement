@@ -266,7 +266,6 @@ def main():
                     if show_camera_feed:
                         cv2.imshow(name_list[index], left_list[index].get_data())
 
-
                     print("Measure from {}: ".format(name_list[index]) + str(distance_list[index]) + " meters")
                     print_distances_to_file(index, output_file)
 
