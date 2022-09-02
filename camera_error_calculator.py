@@ -1,4 +1,6 @@
 from matplotlib import pyplot as plt
+from matplotlib import colors
+from matplotlib.ticker import PercentFormatter
 import numpy as np
 import pyzed.sl as sl
 import cv2
@@ -6,7 +8,7 @@ import math
 
 no_samples = 1000
 # Optional, leave 0 if not used
-real_measured_distance = 0
+real_measured_distance = 1.96
 coordinates = (0, 0)
 
 '''
@@ -81,7 +83,10 @@ def main():
             cv2.circle(image_cv2, coordinates, 2, (0, 0, 255), 2)
             cv2.circle(depth_image_cv2, coordinates, 2, (0, 0, 255), 2)
             if not math.isinf(measured_distance[1]):
-                data.append(round(measured_distance[1], 3))
+                if real_measured_distance != 0:
+                    data.append(round(measured_distance[1] - real_measured_distance, 3))
+                else:
+                    data.append(round(measured_distance[1], 3))
             # To recover data from sl.Mat to use it with opencv, use the get_data() method
             # It returns a numpy array that can be used as a matrix with opencv
 
@@ -95,7 +100,21 @@ def main():
 
     data = np.array(data)
     fig, axis = plt.subplots(figsize= (10, 5))
-    axis.hist(data)
+    N, bins, patches = axis.hist(data)
+
+    # Setting color
+    fracs = ((N ** (1 / 5)) / N.max())
+    norm = colors.Normalize(fracs.min(), fracs.max())
+
+    for thisfrac, thispatch in zip(fracs, patches):
+        color = plt.cm.viridis(norm(thisfrac))
+        thispatch.set_facecolor(color)
+
+    if real_measured_distance != 0:
+        plt.xlabel("Distance difference")
+    else:
+        plt.xlabel("Measured distance")
+    plt.ylabel("Measurements Taken")
     plt.show()
 
     print("\nFinish")
