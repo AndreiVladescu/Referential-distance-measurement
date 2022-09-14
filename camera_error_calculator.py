@@ -8,13 +8,14 @@ import math
 
 no_samples = 1000
 # Optional, leave 0 if not used
-real_measured_distance = 1.96
+real_measured_distance = 1.891
 coordinates = (0, 0)
 
 '''
 Read for details on depth accuracy and best practices
 https://www.stereolabs.com/docs/depth-sensing/depth-settings/
 '''
+
 
 def main():
     global no_samples
@@ -32,7 +33,6 @@ def main():
     init.depth_mode = sl.DEPTH_MODE.QUALITY
     init.coordinate_units = sl.UNIT.METER
 
-
     # Open the camera
     err = zed.open(init)
     if err != sl.ERROR_CODE.SUCCESS:
@@ -41,7 +41,7 @@ def main():
 
     # Set runtime parameters after opening the camera
     runtime = sl.RuntimeParameters()
-    #runtime.sensing_mode = sl.SENSING_MODE.FILL
+    # runtime.sensing_mode = sl.SENSING_MODE.FILL
     runtime.sensing_mode = sl.SENSING_MODE.STANDARD
 
     # Prepare new image size to retrieve half-resolution images
@@ -78,13 +78,13 @@ def main():
             measured_distance = depth_map.get_value(round(image_size.width / 2), round(image_size.height / 2))
             text = "Distance: %.3f meters" % measured_distance[1]
             cv2.putText(depth_image_cv2,
-                        text = text, org=(20, 20),
+                        text=text, org=(20, 20),
                         fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(0, 0, 255), thickness=1)
             cv2.circle(image_cv2, coordinates, 2, (0, 0, 255), 2)
             cv2.circle(depth_image_cv2, coordinates, 2, (0, 0, 255), 2)
             if not math.isinf(measured_distance[1]):
                 if real_measured_distance != 0:
-                    data.append(round(measured_distance[1] - real_measured_distance, 3))
+                    data.append(round(abs(measured_distance[1] - real_measured_distance), 3))
                 else:
                     data.append(round(measured_distance[1], 3))
             # To recover data from sl.Mat to use it with opencv, use the get_data() method
@@ -99,8 +99,9 @@ def main():
     zed.close()
 
     data = np.array(data)
-    fig, axis = plt.subplots(figsize= (10, 5))
-    N, bins, patches = axis.hist(data)
+    fig, axis = plt.subplots(figsize=(10, 5))
+    # axis.hist()
+    N, bins, patches = axis.hist(data, bins=[0, 0.05, 0.10, 0.15, 0.25, 0.30, 0.75])
 
     # Setting color
     fracs = ((N ** (1 / 5)) / N.max())
@@ -111,13 +112,14 @@ def main():
         thispatch.set_facecolor(color)
 
     if real_measured_distance != 0:
-        plt.xlabel("Distance difference")
+        plt.xlabel("Distance difference: Measured - Real")
     else:
-        plt.xlabel("Measured distance")
+        plt.xlabel("Measured distance: d")
     plt.ylabel("Measurements Taken")
     plt.show()
 
     print("\nFinish")
+
 
 if __name__ == "__main__":
     main()
