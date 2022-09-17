@@ -8,7 +8,7 @@ import math
 
 no_samples = 1000
 # Optional, leave 0 if not used
-real_measured_distance = 1.891
+real_measured_distance = 1.92
 coordinates = (0, 0)
 
 '''
@@ -101,7 +101,7 @@ def main():
     data = np.array(data)
     fig, axis = plt.subplots(figsize=(10, 5))
     # axis.hist()
-    N, bins, patches = axis.hist(data, bins=[0, 0.05, 0.10, 0.15, 0.25, 0.30, 0.75])
+    N, bins, patches = axis.hist(data, bins=[0, 0.02 ,0.05, 0.07, 0.10, 0.15, 0.20, 0.30, 0.40])
 
     # Setting color
     fracs = ((N ** (1 / 5)) / N.max())
@@ -112,9 +112,9 @@ def main():
         thispatch.set_facecolor(color)
 
     if real_measured_distance != 0:
-        plt.xlabel("Distance difference: Measured - Real")
+        plt.xlabel("Distance difference (m): Measured - Real")
     else:
-        plt.xlabel("Measured distance: d")
+        plt.xlabel("Measured distance (m): Measured")
     plt.ylabel("Measurements Taken")
     plt.show()
 
