@@ -19,7 +19,7 @@ After filters are applied on the left camera's image
 ![Filtered](https://github.com/AndreiVladescu/Referential-distance-measurement/blob/main/mask1.png?raw=true)
 
 Test 1
-![Filtered](https://github.com/AndreiVladescu/Referential-distance-measurement/blob/main/test1.png?raw=true)
+![Filtered](https://github.com/AndreiVladescu/Referential-distance-measurement/blob/main/test.png?raw=true)
 
 Test 2
 ![Filtered](https://github.com/AndreiVladescu/Referential-distance-measurement/blob/main/test2.png?raw=true)
