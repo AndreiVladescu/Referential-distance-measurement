@@ -285,3 +285,7 @@ poetry.toml
 distances.txt
 tests_output.txt
 *.xml
+*.xml
+.idea/.name
+*.xml
+.idea/workspace.xml
