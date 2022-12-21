@@ -36,6 +36,7 @@ def compute_data(data):
         plt.ylabel("Measurements Taken")
         plt.title("Measurement {}".format(i + 1))
         plt.show()
+        np.savetxt('measurement_{}.csv'.format(i), measurement, delimiter=',')
 
     print("\nFinish")
 
