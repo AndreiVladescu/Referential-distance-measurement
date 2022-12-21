@@ -19,25 +19,25 @@ https://www.stereolabs.com/docs/depth-sensing/depth-settings/
 def compute_data(data):
     global real_measured_distance
 
-    fig, axis = plt.subplots(figsize=(10, 5))
     # axis.hist()
-    N, bins, patches = axis.hist(data)  # , bins=[0, 0.02 ,0.05, 0.07, 0.10, 0.15, 0.20, 0.30, 0.40])
+    for i, measurement in enumerate(data):
+        fig, axis = plt.subplots(figsize=(10, 5))
+        N, bins, patches = axis.hist(measurement)  # , bins=[0, 0.02 ,0.05, 0.07, 0.10, 0.15, 0.20, 0.30, 0.40])
 
-    # Setting color
-    fracs = ((N ** (1 / 5)) / N.max())
-    norm = colors.Normalize(fracs.min(), fracs.max())
+        # Setting color
+        fracs = ((N ** (1 / 5)) / N.max())
+        norm = colors.Normalize(fracs.min(), fracs.max())
 
-    for thisfrac, thispatch in zip(fracs, patches):
-        color = plt.cm.viridis(norm(thisfrac))
-        thispatch.set_facecolor(color)
+        for thisfrac, thispatch in zip(fracs, patches):
+            color = plt.cm.viridis(norm(thisfrac))
+            thispatch.set_facecolor(color)
 
-
-    plt.xlabel("Distance difference (m): Measured - Real")
-    plt.ylabel("Measurements Taken")
-    plt.show()
+        plt.xlabel("Distance difference (m): Measured - Real")
+        plt.ylabel("Measurements Taken")
+        plt.title("Measurement {}".format(i + 1))
+        plt.show()
 
     print("\nFinish")
-
 
 
 def main():
@@ -87,6 +87,13 @@ def main():
     while True:
         temp_samples = no_samples
         real_measured_distance = float(input("Real measured distance to the object in meters:"))
+        if real_measured_distance < 0:
+            cv2.destroyAllWindows()
+            zed.close()
+            data = np.array(data)
+            compute_data(data)
+            return
+        temp_measurements = []
         while temp_samples != 0:
 
             err = zed.grab(runtime)
@@ -108,19 +115,22 @@ def main():
                 cv2.circle(depth_image_cv2, coordinates, 2, (0, 0, 255), 2)
 
                 if not (math.isinf(measured_distance[1]) or math.isnan(measured_distance[1])):
-                    data.append(round(abs(measured_distance[1] - real_measured_distance), 3))
+                    temp_measurements.append(round(abs(measured_distance[1] - real_measured_distance), 3))
 
                 # To recover data from sl.Mat to use it with opencv, use the get_data() method
                 # It returns a numpy array that can be used as a matrix with opencv
                 cv2.imshow("Image", image_cv2)
                 cv2.imshow("Depth", depth_image_cv2)
                 key = cv2.waitKey(10)
-                if key == 113: # q key
+                if key == 113:  # q key
                     cv2.destroyAllWindows()
                     zed.close()
+                    data.append(temp_measurements)
                     data = np.array(data)
                     compute_data(data)
                     return
+        data.append(temp_measurements)
+
 
 if __name__ == "__main__":
     main()
