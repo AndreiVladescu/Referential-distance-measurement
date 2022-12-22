@@ -5,6 +5,9 @@ import numpy as np
 import pyzed.sl as sl
 import cv2
 import math
+import statistics
+import datetime
+import os
 
 no_samples = 100
 coordinates = (0, 0)
@@ -18,6 +21,9 @@ https://www.stereolabs.com/docs/depth-sensing/depth-settings/
 
 def compute_data(data):
     global real_measured_distance
+    current_date = datetime.datetime.now()
+    folder_name = "m_" + current_date.strftime("%b-%d-%H-%M")
+    os.mkdir("measurements/" + folder_name)
 
     # axis.hist()
     for i, measurement in enumerate(data):
@@ -35,8 +41,10 @@ def compute_data(data):
         plt.xlabel("Distance difference (m): Measured - Real")
         plt.ylabel("Measurements Taken")
         plt.title("Measurement {}".format(i + 1))
+        plt.savefig("measurements/" + folder_name + "/measurement_{}.png".format(i))
+        np.savetxt("measurements/" + folder_name + "/measurement_{}.csv".format(i), measurement, delimiter=',')
         plt.show()
-        np.savetxt('measurement_{}.csv'.format(i), measurement, delimiter=',')
+        print("Median error of measurement {}: {}".format(i, statistics.median(measurement)))
 
     print("\nFinish")
 
@@ -84,7 +92,6 @@ def main():
 
     data = []
 
-    key = ''
     while True:
         temp_samples = no_samples
         real_measured_distance = float(input("Real measured distance to the object in meters:"))
@@ -99,7 +106,6 @@ def main():
 
             err = zed.grab(runtime)
             if err == sl.ERROR_CODE.SUCCESS:
-                temp_samples -= 1
                 # Retrieve the left image, depth image in the half-resolution
                 zed.retrieve_image(image_zed, sl.VIEW.LEFT, sl.MEM.CPU, image_size)
                 zed.retrieve_image(depth_image_zed, sl.VIEW.DEPTH, sl.MEM.CPU, image_size)
@@ -109,6 +115,8 @@ def main():
                 depth_image_cv2 = depth_image_zed.get_data()
 
                 measured_distance = depth_map.get_value(round(image_size.width / 2), round(image_size.height / 2))
+                if math.isnan(measured_distance[1]) or math.isinf(measured_distance[1]):
+                    continue
                 text = "Distance: %.3f meters" % measured_distance[1]
                 cv2.putText(depth_image_cv2, text=text, org=(20, 20),
                             fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(0, 0, 255), thickness=1)
@@ -122,14 +130,9 @@ def main():
                 # It returns a numpy array that can be used as a matrix with opencv
                 cv2.imshow("Image", image_cv2)
                 cv2.imshow("Depth", depth_image_cv2)
-                key = cv2.waitKey(10)
-                if key == 113:  # q key
-                    cv2.destroyAllWindows()
-                    zed.close()
-                    data.append(temp_measurements)
-                    data = np.array(data)
-                    compute_data(data)
-                    return
+                cv2.waitKey(10)
+                temp_samples -= 1
+
         data.append(temp_measurements)
 
 
