@@ -9,20 +9,27 @@ import statistics
 import datetime
 import os
 
-no_samples = 100
+no_samples = 1000
 coordinates = (0, 0)
 real_measured_distance = 0.0
-
+measurement_mode = 'QUALITY'
+resolution_mode = 'HD1080'
+'''
+HD2K, HD1080,
+HD720, VGA
+'''
 '''
 Read for details on depth accuracy and best practices
 https://www.stereolabs.com/docs/depth-sensing/depth-settings/
 '''
 
-
 def compute_data(data):
     global real_measured_distance
+    global measurement_mode
+    global resolution_mode
+
     current_date = datetime.datetime.now()
-    folder_name = "m_" + current_date.strftime("%b-%d-%H-%M")
+    folder_name = "m_" + current_date.strftime("%b-%d-%H-%M") + '_' + measurement_mode + '_' + resolution_mode
     os.mkdir("measurements/" + folder_name)
 
     # axis.hist()
@@ -53,6 +60,8 @@ def main():
     global no_samples
     global coordinates
     global real_measured_distance
+    global measurement_mode
+    global resolution_mode
 
     print('Running camera error calculations')
 
@@ -62,7 +71,27 @@ def main():
     # Set configuration parameters
     init = sl.InitParameters()
     init.camera_resolution = sl.RESOLUTION.HD1080
+
+    if init.camera_resolution == sl.RESOLUTION.HD2K:
+        resolution_mode = 'HD2K'
+        init.camera_fps = 15
+    elif init.camera_resolution == sl.RESOLUTION.HD1080:
+        resolution_mode = 'HD1080'
+        init.camera_fps = 30
+    elif init.camera_resolution == sl.RESOLUTION.HD720:
+        resolution_mode = 'HD720'
+        init.camera_fps = 60
+    elif init.camera_resolution == sl.RESOLUTION.VGA:
+        resolution_mode = 'VGA'
+        init.camera_fps = 100
+
     init.depth_mode = sl.DEPTH_MODE.QUALITY
+
+    if init.depth_mode == sl.DEPTH_MODE.QUALITY:
+        measurement_mode = 'QUALITY'
+    elif init.depth_mode == sl.DEPTH_MODE.ULTRA:
+        measurement_mode = 'ULTRA'
+    init.depth_maximum_distance = 40
     init.coordinate_units = sl.UNIT.METER
 
     # Open the camera
@@ -73,7 +102,7 @@ def main():
 
     # Set runtime parameters after opening the camera
     runtime = sl.RuntimeParameters()
-    # runtime.sensing_mode = sl.SENSING_MODE.FILL
+    #runtime.sensing_mode = sl.SENSING_MODE.FILL
     runtime.sensing_mode = sl.SENSING_MODE.STANDARD
 
     # Prepare new image size to retrieve half-resolution images
@@ -119,12 +148,12 @@ def main():
                     continue
                 text = "Distance: %.3f meters" % measured_distance[1]
                 cv2.putText(depth_image_cv2, text=text, org=(20, 20),
-                            fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(0, 0, 255), thickness=1)
+                            fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=0.7, color=(0, 0, 255), thickness=1)
                 cv2.circle(image_cv2, coordinates, 2, (0, 0, 255), 2)
                 cv2.circle(depth_image_cv2, coordinates, 2, (0, 0, 255), 2)
 
                 if not (math.isinf(measured_distance[1]) or math.isnan(measured_distance[1])):
-                    temp_measurements.append(round(abs(measured_distance[1] - real_measured_distance), 3))
+                    temp_measurements.append(round(real_measured_distance - measured_distance[1], 3))
 
                 # To recover data from sl.Mat to use it with opencv, use the get_data() method
                 # It returns a numpy array that can be used as a matrix with opencv

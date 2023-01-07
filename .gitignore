@@ -292,3 +292,6 @@ tests_output.txt
 *.csv
 *.csv
 *.png
+*.zip
+*.xml
+.idea/workspace.xml
