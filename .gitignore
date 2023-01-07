@@ -289,3 +289,6 @@ tests_output.txt
 .idea/.name
 *.xml
 .idea/workspace.xml
+*.csv
+*.csv
+*.png
