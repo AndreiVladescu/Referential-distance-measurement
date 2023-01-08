@@ -295,3 +295,4 @@ tests_output.txt
 *.zip
 *.xml
 .idea/workspace.xml
+*.txt
