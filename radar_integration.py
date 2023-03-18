@@ -1,18 +1,35 @@
 import pyzed.sl as sl
 import cv2
-import numpy as np
-import threading
-import time
-import signal
-import math
-import sys
-from mpl_toolkits import mplot3d
-import matplotlib.pyplot as plt
+import socket
+import struct
 
-mobile_platform_ip = '192.168.0.230'
-mobile_platform_port = 5678
+mobile_platform_ip = '192.168.0.203'
+mobile_platform_port = 12345
+
+
 
 def main() :
+    s = socket.socket()
+
+    s.connect((mobile_platform_ip, mobile_platform_port))
+    s.send(b"1")
+    data = s.recv(4)
+    data = struct.unpack('<i', data)[0]
+    print("Received from server: {0}".format(data))
+    num_samples = data
+
+    i = 0
+
+    while i < num_samples:
+        data = s.recv(4)
+        data = struct.unpack('<i', data)[0]
+        rdr_data = data
+        print(rdr_data)
+        i = i + 1
+
+    s.send(b"0")
+    s.close()
+
     zed = sl.Camera()
 
     init = sl.InitParameters()
