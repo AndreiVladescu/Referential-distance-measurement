@@ -171,27 +171,20 @@ def main():
             print('Distance to center:{0}'.format(point_cloud.get_value(coordinates[0], coordinates[1])[1][2]))
             image_ocv = image_zed.get_data()
 
-            # image_ocv = cv2.circle(image_ocv, coordinates, 1, (0, 0, 255), 2)
-
-            ''''''
             image_masked, distance = color_mask(image_ocv, point_cloud)
 
             cv2.imshow("Masked Image", image_masked)
             cv2.imshow("Original Image", image_ocv)
 
-            key = cv2.waitKey(1)
-            '''
+            key = cv2.waitKey(0)
+
             if key == 99:
                 print('Capturing frame')
             elif key == 105:
                 print('Ignoring frame')
             else:
                 print('Key not a command, skipping...')
-            
-            
-            
-            cod pentru captura socket si afisare in consola output de la rpi/radar
-            '''
+
             get_radar_data()
 
     cv2.destroyAllWindows()
