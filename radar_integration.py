@@ -176,6 +176,8 @@ def main():
             cv2.imshow("Masked Image", image_masked)
             cv2.imshow("Original Image", image_ocv)
 
+            get_radar_data()
+
             key = cv2.waitKey(0)
 
             if key == 99:
@@ -185,7 +187,7 @@ def main():
             else:
                 print('Key not a command, skipping...')
 
-            get_radar_data()
+
 
     cv2.destroyAllWindows()
     zed.close()
