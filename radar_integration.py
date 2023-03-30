@@ -5,6 +5,8 @@ import cv2
 import socket
 import struct
 import numpy as np
+from ultralytics import YOLO
+import supervision as sv
 
 mobile_platform_ip = '192.168.0.203'
 mobile_platform_port = 12345
@@ -16,7 +18,12 @@ green_upper_limit = np.array([102, 255, 255])  # setting the green upper limit
 
 s = socket.socket()
 
-
+model = YOLO("best.pt");
+box_an = sv.BoxAnnotator(
+    thickness=2,
+    text_thickness=2,
+    text_scale=1
+)
 def color_mask(image_cv2, point_cloud):
     # Use HSV to easily get isolated colors
     image_hsv = cv2.cvtColor(image_cv2, cv2.COLOR_BGR2HSV)
@@ -130,6 +137,21 @@ def get_radar_data():
     print(radar_data_array)
 
 
+def yolo_filter(frame):
+    result = model(frame)[0]
+
+    detections = sv.Detections.from_yolov8(result)
+    frame = box_an.annotate(scene=frame, detections=detections)
+    black_img = np.zeros_like(frame)
+
+    boxes = detections.xyxy.astype(int)
+
+    for box in boxes:
+        x1, y1, x2, y2 = box
+        black_img[y1:y2, x1:x2] = frame[y1:y2, x1:x2]
+
+    return black_img
+
 def main():
     global s
 
@@ -171,7 +193,9 @@ def main():
             print('Distance to center:{0}'.format(point_cloud.get_value(coordinates[0], coordinates[1])[1][2]))
             image_ocv = image_zed.get_data()
 
-            image_masked, distance = color_mask(image_ocv, point_cloud)
+            image_filtered = yolo_filter(image_ocv)
+
+            image_masked, distance = color_mask(image_filtered, point_cloud)
 
             cv2.imshow("Masked Image", image_masked)
             cv2.imshow("Original Image", image_ocv)
