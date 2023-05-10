@@ -6,3 +6,4 @@ In the first part, I mostly used ZED. To get better results, we changed it with 
 
 # Detection Mode
 The camera firstly detects the objects of interest, blue and green balls, for which I have trained them using the YOLO v8 algorithm.
+![Measured Objects]('measured objects.png' "Measured objects")
