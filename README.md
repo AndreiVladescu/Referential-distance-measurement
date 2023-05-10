@@ -7,3 +7,5 @@ In the first part, I mostly used ZED. To get better results, we changed it with 
 # Detection Mode
 The camera firstly detects the objects of interest, blue and green balls, for which I have trained them using the YOLO v8 algorithm.
 ![Measured Objects](measured%20objects.png "Measured objects")
+
+After the coordinates of the objects are collected, the computer than calculates the distance relative from one ball to the other. The radar is synchronised with it, using another platform, e.g. Raspberry Pi, hosting a socket server. The python client and C socket server then transfer the data from the Radar to the client.
