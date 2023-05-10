@@ -7,8 +7,13 @@ import struct
 import numpy as np
 from ultralytics import YOLO
 import supervision as sv
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 
-mobile_platform_ip = '192.168.0.203'
+import os
+
+mobile_platform_ip = '192.168.1.100'
 mobile_platform_port = 12345
 
 blue_lower_limit = np.array([85, 120, 50])  # setting the blue lower limit
@@ -135,9 +140,17 @@ def get_radar_data():
         i = i + 1
 
     print(radar_data_array)
-
+    # Plot the radar data
+    plt.clf()
+    plt.plot(radar_data_array)
+    plt.title('Radar Data')
+    plt.xlabel('Sample Index')
+    plt.ylabel('Value')
+    plt.show()
+    plt.pause(0.1)
 
 def yolo_filter(frame):
+    frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2RGB)
     result = model(frame)[0]
 
     detections = sv.Detections.from_yolov8(result)
@@ -164,7 +177,7 @@ def main():
     init.camera_fps = 30
     init.depth_mode = sl.DEPTH_MODE.PERFORMANCE
     init.coordinate_units = sl.UNIT.MILLIMETER
-
+    plt.ion()
     err = zed.open(init)
     if err != sl.ERROR_CODE.SUCCESS:
         print(repr(err))
@@ -187,21 +200,22 @@ def main():
     while key != 113:
         err = zed.grab(runtime)
         if err == sl.ERROR_CODE.SUCCESS:
-            zed.retrieve_image(image_zed, sl.VIEW.LEFT, sl.MEM.CPU, image_size)
+            try:
+                zed.retrieve_image(image_zed, sl.VIEW.LEFT, sl.MEM.CPU, image_size)
 
-            zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA, sl.MEM.CPU, image_size)
-            print('Distance to center:{0}'.format(point_cloud.get_value(coordinates[0], coordinates[1])[1][2]))
-            image_ocv = image_zed.get_data()
+                zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA, sl.MEM.CPU, image_size)
+                print('Distance to center:{0}'.format(point_cloud.get_value(coordinates[0], coordinates[1])[1][2]))
+                image_ocv = image_zed.get_data()
 
-            image_filtered = yolo_filter(image_ocv)
+                image_filtered = yolo_filter(image_ocv)
+                image_masked, distance = color_mask(image_filtered, point_cloud)
 
-            image_masked, distance = color_mask(image_filtered, point_cloud)
+                cv2.imshow("Masked Image", image_masked)
+                cv2.imshow("Original Image", image_ocv)
 
-            cv2.imshow("Masked Image", image_masked)
-            cv2.imshow("Original Image", image_ocv)
-
-            get_radar_data()
-
+                get_radar_data()
+            except:
+                pass
             key = cv2.waitKey(0)
 
             if key == 99:
