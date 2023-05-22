@@ -10,7 +10,7 @@ import supervision as sv
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
-
+import json
 import os
 
 mobile_platform_ip = '192.168.1.100'
@@ -22,6 +22,8 @@ green_lower_limit = np.array([30, 80, 20])  # setting the green lower limit
 green_upper_limit = np.array([102, 255, 255])  # setting the green upper limit
 
 s = socket.socket()
+
+number_of_samples = 16
 
 model = YOLO("best.pt");
 box_an = sv.BoxAnnotator(
@@ -132,6 +134,9 @@ def get_radar_data():
 
     i = 0
     radar_data_array = []
+    
+    radar_data_array.append(num_samples)
+    
     while i < num_samples:
         data = s.recv(4)
         data = struct.unpack('<i', data)[0]
@@ -148,6 +153,7 @@ def get_radar_data():
     plt.ylabel('Value')
     plt.show()
     plt.pause(0.1)
+    return radar_data_array
 
 def yolo_filter(frame):
     frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2RGB)
@@ -195,6 +201,9 @@ def main():
 
     image_zed = sl.Mat(image_size.width, image_size.height, sl.MAT_TYPE.U8_C4)
     point_cloud = sl.Mat()
+    
+    all_radar_data = []
+    radar_dict = []
 
     key = ' '
     while key != 113:
@@ -204,7 +213,9 @@ def main():
                 zed.retrieve_image(image_zed, sl.VIEW.LEFT, sl.MEM.CPU, image_size)
 
                 zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA, sl.MEM.CPU, image_size)
-                print('Distance to center:{0}'.format(point_cloud.get_value(coordinates[0], coordinates[1])[1][2]))
+                distance_to_center = point_cloud.get_value(coordinates[0], coordinates[1])[1][2]
+                
+                print('Distance to center:{0}'.format(distance_to_center))
                 image_ocv = image_zed.get_data()
 
                 image_filtered = yolo_filter(image_ocv)
@@ -212,14 +223,30 @@ def main():
 
                 cv2.imshow("Masked Image", image_masked)
                 cv2.imshow("Original Image", image_ocv)
-
-                get_radar_data()
+                
+                counter = 0
+                while counter < number_of_samples:
+                    counter += 1
+                    radar_data = get_radar_data()
+                    all_radar_data.append(radar_data)
+                    
+                radar_dict = {
+                'distance_to_center': distance_to_center,
+                'number_of_samples': number_of_samples,
+                'all_radar_data': all_radar_data
+            }
+                
             except:
                 pass
             key = cv2.waitKey(0)
 
             if key == 99:
                 print('Capturing frame')
+                # Save current radar data to a JSON file
+                with open('radar_data.json', 'a') as f:
+                    json.dump(radar_dict, f)
+                    f.write('\n')  # Write each dict on a new line
+                all_radar_data = []
             elif key == 105:
                 print('Ignoring frame')
             else:
