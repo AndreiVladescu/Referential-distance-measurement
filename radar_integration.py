@@ -8,13 +8,18 @@ import numpy as np
 from ultralytics import YOLO
 import supervision as sv
 import matplotlib
-matplotlib.use('TkAgg')
+#matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import json
 import os
 
-mobile_platform_ip = '192.168.1.100'
+# rpi ip, not radar's
+mobile_platform_ip = '192.168.1.101'
 mobile_platform_port = 12345
+
+# RADAR IP is set to 192.168.1.110
+# Run this on raspberry pi to get it going:
+# ./mrmSampleApp -l logMRM_Scans.csv -e 192.168.1.110
 
 blue_lower_limit = np.array([85, 120, 50])  # setting the blue lower limit
 blue_upper_limit = np.array([125, 255, 255])  # setting the blue upper limit
@@ -25,13 +30,19 @@ s = socket.socket()
 
 number_of_samples = 16
 
-model = YOLO("best.pt");
+distance_blue = 0
+distance_green = 0
+
+model = YOLO("best.pt")
 box_an = sv.BoxAnnotator(
     thickness=2,
     text_thickness=2,
     text_scale=1
 )
 def color_mask(image_cv2, point_cloud):
+    global distance_blue
+    global distance_green
+
     # Use HSV to easily get isolated colors
     image_hsv = cv2.cvtColor(image_cv2, cv2.COLOR_BGR2HSV)
     mask_blue = cv2.inRange(image_hsv, blue_lower_limit, blue_upper_limit)
@@ -104,11 +115,15 @@ def color_mask(image_cv2, point_cloud):
     moving_y1 = point_moving_obj[1][1]
     moving_z1 = point_moving_obj[1][2]
 
+    distance_blue = math.sqrt(moving_x1 ** 2 + moving_y1 ** 2 + moving_z1 ** 2)
+
     # Reference object
     point_static_obj = point_cloud.get_value(pixel_cords_static[0], pixel_cords_static[1])
     static_x2 = point_static_obj[1][0]
     static_y2 = point_static_obj[1][1]
     static_z2 = point_static_obj[1][2]
+
+    distance_green = math.sqrt(static_x2 ** 2 + static_y2 ** 2 + static_z2 ** 2)
 
     distance = math.sqrt((moving_x1 - static_x2) ** 2 + (moving_y1 - static_y2) ** 2 + (moving_z1 - static_z2) ** 2)
 
@@ -173,6 +188,8 @@ def yolo_filter(frame):
 
 def main():
     global s
+    global distance_blue
+    global distance_green
 
     s.connect((mobile_platform_ip, mobile_platform_port))
 
@@ -231,7 +248,8 @@ def main():
                     all_radar_data.append(radar_data)
                     
                 radar_dict = {
-                'distance_to_center': distance_to_center,
+                'distance_to_blue': distance_blue,
+                'distance_to_green': distance_green,
                 'number_of_samples': number_of_samples,
                 'all_radar_data': all_radar_data
             }
@@ -240,18 +258,18 @@ def main():
                 pass
             key = cv2.waitKey(0)
 
+            'c key'
             if key == 99:
                 print('Capturing frame')
                 # Save current radar data to a JSON file
                 with open('radar_data.json', 'a') as f:
                     json.dump(radar_dict, f)
                     f.write('\n')  # Write each dict on a new line
-                all_radar_data = []
             elif key == 105:
                 print('Ignoring frame')
             else:
                 print('Key not a command, skipping...')
-
+            all_radar_data = []
 
 
     cv2.destroyAllWindows()
